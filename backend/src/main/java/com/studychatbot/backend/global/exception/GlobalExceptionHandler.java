@@ -50,4 +50,24 @@ public class GlobalExceptionHandler {
                 .build()
         );
     }
+
+    @ExceptionHandler(DocumentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDocumentNotFound(DocumentNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ErrorResponse.builder()
+                .code("DOCUMENT_NOT_FOUND")
+                .message(e.getMessage())
+                .build()
+        );
+    }
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+            ErrorResponse.builder()
+                .code("FORBIDDEN")
+                .message(e.getMessage())
+                .build()
+        );
+    }
 }
