@@ -38,6 +38,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 // Spring MVC가 에러를 /error로 포워드할 때 Security가 재차 막지 않도록 허용
                 .requestMatchers("/error").permitAll()
+                // Swagger UI 자체 리소스 — 인증 없이 접근 허용
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
