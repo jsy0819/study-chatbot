@@ -28,7 +28,16 @@ dependencies {
 	developmentOnly 'me.paulschwarz:springboot3-dotenv'
 	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
+	// Spring Security (버전은 Spring Boot BOM이 관리)
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
+	// JWT — api(인터페이스), impl(구현체), jackson(직렬화) 세 모듈 필요
+	implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
 	testCompileOnly 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testAnnotationProcessor 'org.projectlombok:lombok'
