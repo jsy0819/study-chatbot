@@ -42,6 +42,9 @@ dependencies {
 	// Swagger UI (springdoc-openapi) — Spring Boot 3.x 전용 2.x 계열 사용
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
 
+	// Apache PDFBox — PDF 텍스트 추출 (3.x는 Loader API 사용)
+	implementation 'org.apache.pdfbox:pdfbox:3.0.7'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testCompileOnly 'org.projectlombok:lombok'

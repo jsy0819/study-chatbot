@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.List;
 
@@ -87,6 +88,36 @@ public class GlobalExceptionHandler {
             ErrorResponse.builder()
                 .code("GEMINI_API_ERROR")
                 .message(e.getMessage())
+                .build()
+        );
+    }
+
+    @ExceptionHandler(InvalidFileException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidFile(InvalidFileException e) {
+        return ResponseEntity.badRequest().body(
+            ErrorResponse.builder()
+                .code("INVALID_FILE")
+                .message(e.getMessage())
+                .build()
+        );
+    }
+
+    @ExceptionHandler(PdfProcessingException.class)
+    public ResponseEntity<ErrorResponse> handlePdfProcessing(PdfProcessingException e) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
+            ErrorResponse.builder()
+                .code("PDF_PROCESSING_ERROR")
+                .message(e.getMessage())
+                .build()
+        );
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ErrorResponse> handleMaxUploadSize(MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(
+            ErrorResponse.builder()
+                .code("FILE_TOO_LARGE")
+                .message("파일 크기가 허용 한도(30MB)를 초과했습니다.")
                 .build()
         );
     }

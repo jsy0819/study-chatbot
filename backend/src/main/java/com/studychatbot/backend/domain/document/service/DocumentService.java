@@ -10,9 +10,11 @@ import com.studychatbot.backend.domain.user.repository.UserRepository;
 import com.studychatbot.backend.global.exception.DocumentNotFoundException;
 import com.studychatbot.backend.global.exception.ForbiddenException;
 import com.studychatbot.backend.global.exception.InvalidCredentialsException;
+import com.studychatbot.backend.global.pdf.PdfTextExtractor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -23,6 +25,7 @@ public class DocumentService {
 
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
+    private final PdfTextExtractor pdfTextExtractor;
 
     @Transactional
     public DocumentResponse upload(String email, DocumentUploadRequest request) {
@@ -33,6 +36,25 @@ public class DocumentService {
                 .user(user)
                 .title(request.getTitle())
                 .content(request.getContent())
+                .status(DocumentStatus.DONE)
+                .build();
+
+        return DocumentResponse.from(documentRepository.save(document));
+    }
+
+    @Transactional
+    public DocumentResponse uploadPdf(String email, MultipartFile file, String title) {
+        User user = findUserByEmail(email);
+
+        String extractedText = pdfTextExtractor.extract(file);
+        String documentTitle = (title != null && !title.isBlank())
+                ? title
+                : stripExtension(file.getOriginalFilename());
+
+        Document document = Document.builder()
+                .user(user)
+                .title(documentTitle)
+                .content(extractedText)
                 .status(DocumentStatus.DONE)
                 .build();
 
@@ -76,5 +98,13 @@ public class DocumentService {
         if (!document.getUser().getId().equals(user.getId())) {
             throw new ForbiddenException();
         }
+    }
+
+    private String stripExtension(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return "제목 없음";
+        }
+        int dot = filename.lastIndexOf('.');
+        return dot > 0 ? filename.substring(0, dot) : filename;
     }
 }
