@@ -36,6 +36,9 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
 
+	// Redis — StringRedisTemplate 기반 리프레시 토큰 저장소
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
 	// Swagger UI (springdoc-openapi) — Spring Boot 3.x 전용 2.x 계열 사용
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
 
