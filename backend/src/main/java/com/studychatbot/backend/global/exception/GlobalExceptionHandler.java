@@ -71,6 +71,16 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidToken(InvalidTokenException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+            ErrorResponse.builder()
+                .code("INVALID_TOKEN")
+                .message(e.getMessage())
+                .build()
+        );
+    }
+
     @ExceptionHandler(GeminiApiException.class)
     public ResponseEntity<ErrorResponse> handleGeminiApi(GeminiApiException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(

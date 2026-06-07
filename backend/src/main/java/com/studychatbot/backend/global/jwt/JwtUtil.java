@@ -15,30 +15,34 @@ import java.util.Date;
 public class JwtUtil {
 
     private final SecretKey signingKey;
-    private final long expirationMs;
+    private final long accessExpirationMs;
+    private final long refreshExpirationMs;
 
     public JwtUtil(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiration-ms}") long expirationMs) {
+            @Value("${jwt.access-expiration-ms}") long accessExpirationMs,
+            @Value("${jwt.refresh-expiration-ms}") long refreshExpirationMs) {
         this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expirationMs = expirationMs;
+        this.accessExpirationMs = accessExpirationMs;
+        this.refreshExpirationMs = refreshExpirationMs;
     }
 
-    public String generateToken(String email) {
-        Date now = new Date();
-        return Jwts.builder()
-            .subject(email)
-            .issuedAt(now)
-            .expiration(new Date(now.getTime() + expirationMs))
-            .signWith(signingKey)
-            .compact();
+    public String generateAccessToken(String email) {
+        return buildToken(email, accessExpirationMs);
+    }
+
+    public String generateRefreshToken(String email) {
+        return buildToken(email, refreshExpirationMs);
+    }
+
+    public long getRefreshExpirationMs() {
+        return refreshExpirationMs;
     }
 
     public String extractEmail(String token) {
         return parseClaims(token).getSubject();
     }
 
-    // D단계 JWT 필터에서 사용
     public boolean isTokenValid(String token) {
         try {
             parseClaims(token);
@@ -46,6 +50,16 @@ public class JwtUtil {
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
+    }
+
+    private String buildToken(String email, long expirationMs) {
+        Date now = new Date();
+        return Jwts.builder()
+            .subject(email)
+            .issuedAt(now)
+            .expiration(new Date(now.getTime() + expirationMs))
+            .signWith(signingKey)
+            .compact();
     }
 
     private Claims parseClaims(String token) {
