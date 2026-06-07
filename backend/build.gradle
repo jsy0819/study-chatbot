@@ -25,7 +25,7 @@ dependencies {
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	// .env 파일을 Spring 환경변수로 로드 (개발 전용 — 운영에서는 실제 환경변수 사용)
 	implementation platform('me.paulschwarz:spring-dotenv-bom:5.1.0')
-	developmentOnly 'me.paulschwarz:springboot3-dotenv'
+	developmentOnly 'me.paulschwarz:springboot3-dotenv:5.1.0'
 	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
 	// Spring Security (버전은 Spring Boot BOM이 관리)
@@ -44,6 +44,11 @@ dependencies {
 
 	// Apache PDFBox — PDF 텍스트 추출 (3.x는 Loader API 사용)
 	implementation 'org.apache.pdfbox:pdfbox:3.0.7'
+
+	// Spring AI — BOM으로 하위 모듈 버전을 일괄 관리 (Spring Boot 3.5.x 지원)
+	implementation platform('org.springframework.ai:spring-ai-bom:1.1.7')
+	// Google GenAI(Gemini) 스타터 — ChatClient 자동 구성 포함
+	implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'

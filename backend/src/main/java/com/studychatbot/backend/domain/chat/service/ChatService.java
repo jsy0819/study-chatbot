@@ -6,11 +6,11 @@ import com.studychatbot.backend.domain.document.entity.Document;
 import com.studychatbot.backend.domain.document.repository.DocumentRepository;
 import com.studychatbot.backend.domain.user.entity.User;
 import com.studychatbot.backend.domain.user.repository.UserRepository;
-import com.studychatbot.backend.global.client.GeminiClient;
 import com.studychatbot.backend.global.exception.DocumentNotFoundException;
 import com.studychatbot.backend.global.exception.ForbiddenException;
 import com.studychatbot.backend.global.exception.InvalidCredentialsException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +21,7 @@ public class ChatService {
 
     private final UserRepository userRepository;
     private final DocumentRepository documentRepository;
-    private final GeminiClient geminiClient;
+    private final ChatClient chatClient;
 
     public ChatResponse chat(String email, ChatRequest request) {
         User user = userRepository.findByEmail(email)
@@ -36,7 +36,7 @@ public class ChatService {
         }
 
         String prompt = buildPrompt(document.getContent(), request.getMessage());
-        String answer = geminiClient.chat(prompt);
+        String answer = chatClient.prompt().user(prompt).call().content();
         return new ChatResponse(answer);
     }
 
