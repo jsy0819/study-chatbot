@@ -18,11 +18,14 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7
+    image: redis/redis-stack-server:7.4.0-v8
     container_name: studychatbot-redis
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes
+    environment:
+      # redis-stack-server는 커스텀 엔트리포인트로 RediSearch 모듈을 로드한다.
+      # command를 직접 오버라이드하면 모듈이 누락되므로 REDIS_ARGS로 옵션을 전달한다.
+      REDIS_ARGS: "--appendonly yes"
     volumes:
       - redis_data:/data
     healthcheck:

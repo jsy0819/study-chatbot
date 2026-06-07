@@ -49,6 +49,10 @@ dependencies {
 	implementation platform('org.springframework.ai:spring-ai-bom:1.1.7')
 	// Google GenAI(Gemini) 스타터 — ChatClient 자동 구성 포함
 	implementation 'org.springframework.ai:spring-ai-starter-model-google-genai'
+	// Google GenAI 텍스트 임베딩 — chat 스타터와 별도 모듈 (EmbeddingModel 자동 구성)
+	implementation 'org.springframework.ai:spring-ai-starter-model-google-genai-embedding'
+	// Redis VectorStore 스타터 — Jedis 클라이언트 + FT.CREATE/FT.SEARCH 자동 구성
+	implementation 'org.springframework.ai:spring-ai-starter-vector-store-redis'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'

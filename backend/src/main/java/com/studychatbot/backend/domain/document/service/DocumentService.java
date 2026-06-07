@@ -26,12 +26,12 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final UserRepository userRepository;
     private final PdfTextExtractor pdfTextExtractor;
+    private final DocumentVectorService documentVectorService;
 
     @Transactional
     public DocumentResponse upload(String email, DocumentUploadRequest request) {
         User user = findUserByEmail(email);
 
-        // 텍스트 기반 업로드는 즉시 처리 완료 상태로 저장 (PDF 추출은 2단계)
         Document document = Document.builder()
                 .user(user)
                 .title(request.getTitle())
@@ -39,7 +39,10 @@ public class DocumentService {
                 .status(DocumentStatus.DONE)
                 .build();
 
-        return DocumentResponse.from(documentRepository.save(document));
+        Document saved = documentRepository.save(document);
+        // DB 저장 후 청크 분할 → 임베딩 → 벡터 스토어 저장 (saved.getId() 확보 후 호출)
+        documentVectorService.embed(saved);
+        return DocumentResponse.from(saved);
     }
 
     @Transactional
@@ -58,7 +61,10 @@ public class DocumentService {
                 .status(DocumentStatus.DONE)
                 .build();
 
-        return DocumentResponse.from(documentRepository.save(document));
+        Document saved = documentRepository.save(document);
+        // DB 저장 후 청크 분할 → 임베딩 → 벡터 스토어 저장
+        documentVectorService.embed(saved);
+        return DocumentResponse.from(saved);
     }
 
     public List<DocumentResponse> getMyDocuments(String email) {
@@ -81,6 +87,8 @@ public class DocumentService {
         User user = findUserByEmail(email);
         Document document = findDocumentById(id);
         checkOwnership(document, user);
+        // 벡터 스토어에서 청크 먼저 제거 후 DB 삭제
+        documentVectorService.deleteByDocument(id);
         documentRepository.delete(document);
     }
 
