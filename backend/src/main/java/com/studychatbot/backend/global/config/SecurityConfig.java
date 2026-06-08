@@ -1,5 +1,6 @@
 package com.studychatbot.backend.global.config;
 
+import com.studychatbot.backend.global.jwt.JwtAuthenticationEntryPoint;
 import com.studychatbot.backend.global.jwt.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -55,6 +57,10 @@ public class SecurityConfig {
             // JWT 사용 → 서버 세션 불필요
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // 미인증 요청에 403 대신 401을 반환(기본 Http403ForbiddenEntryPoint 대체).
+            // 401=미인증→프론트가 토큰 재발급, 403=권한 없음(ForbiddenException)으로 구분
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()
                 // Spring MVC가 에러를 /error로 포워드할 때 Security가 재차 막지 않도록 허용

@@ -114,12 +114,17 @@ export default function DocumentsPage() {
             <span className="text-gray-200">|</span>
             <span className="text-sm text-gray-500 font-medium">내 자료</span>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-          >
-            로그아웃
-          </button>
+          <div className="flex items-center gap-4">
+            <Link to="/chat" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+              채팅
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+            >
+              로그아웃
+            </button>
+          </div>
         </div>
       </header>
 

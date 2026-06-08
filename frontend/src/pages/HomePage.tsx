@@ -85,10 +85,16 @@ export default function HomePage() {
             </div>
           </dl>
 
-          <div className="mt-8 pt-6 border-t border-gray-100">
+          <div className="mt-8 pt-6 border-t border-gray-100 flex gap-3">
+            <Link
+              to="/chat"
+              className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-700 transition-colors"
+            >
+              채팅 시작
+            </Link>
             <Link
               to="/documents"
-              className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-700 transition-colors"
+              className="inline-flex items-center gap-2 border border-gray-200 text-gray-700 text-sm rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors"
             >
               내 자료 관리
             </Link>

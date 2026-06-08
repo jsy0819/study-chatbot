@@ -24,3 +24,20 @@ export interface DocumentResponse {
   status: 'PROCESSING' | 'DONE' | 'FAILED';
   createdAt: string;
 }
+
+// POST /api/chat 요청
+export interface ChatRequest {
+  documentId: number;
+  message: string;
+}
+
+// POST /api/chat 응답
+export interface ChatResponse {
+  answer: string;
+}
+
+// POST /api/auth/refresh 응답
+export interface TokenRefreshResponse {
+  accessToken: string;
+  tokenType: string;
+}
