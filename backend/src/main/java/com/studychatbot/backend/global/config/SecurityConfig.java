@@ -2,6 +2,7 @@ package com.studychatbot.backend.global.config;
 
 import com.studychatbot.backend.global.jwt.JwtAuthenticationEntryPoint;
 import com.studychatbot.backend.global.jwt.JwtAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -62,6 +63,11 @@ public class SecurityConfig {
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint))
             .authorizeHttpRequests(auth -> auth
+                // SSE(SseEmitter)는 응답 후 ASYNC 디스패치로 필터 체인을 재진입한다.
+                // 이때 디스패치 스레드엔 SecurityContext가 없어 AuthorizationFilter가
+                // Access Denied를 던지므로, 최초 REQUEST에서 이미 인증된 ASYNC 재진입은 허용한다.
+                // (ASYNC 디스패치는 컨테이너 내부에서만 발생 → 외부 위조 불가, 안전)
+                .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                 .requestMatchers("/api/auth/**").permitAll()
                 // Spring MVC가 에러를 /error로 포워드할 때 Security가 재차 막지 않도록 허용
                 .requestMatchers("/error").permitAll()

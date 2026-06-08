@@ -26,14 +26,14 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-function redirectToLogin(): void {
+export function redirectToLogin(): void {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   window.location.href = '/login';
 }
 
 // apiClient 인터셉터를 타지 않도록 bare axios로 직접 호출
-async function refreshAccessToken(): Promise<string> {
+export async function refreshAccessToken(): Promise<string> {
   const refreshToken = localStorage.getItem('refreshToken');
   if (!refreshToken) throw new Error('No refresh token');
 
