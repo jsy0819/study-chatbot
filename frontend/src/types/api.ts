@@ -16,3 +16,11 @@ export interface UserMeResponse {
   email: string;
   name: string;
 }
+
+// GET /api/documents, POST /api/documents, POST /api/documents/pdf 응답
+export interface DocumentResponse {
+  id: number;
+  title: string;
+  status: 'PROCESSING' | 'DONE' | 'FAILED';
+  createdAt: string;
+}

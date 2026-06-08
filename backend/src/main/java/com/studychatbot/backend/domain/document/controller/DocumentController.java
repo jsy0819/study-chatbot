@@ -41,7 +41,7 @@ public class DocumentController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<DocumentResponse>> getDocument(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             Authentication authentication) {
         String email = authentication.getName();
         DocumentResponse response = documentService.getDocument(email, id);
@@ -61,7 +61,7 @@ public class DocumentController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDocument(
-            @PathVariable Long id,
+            @PathVariable("id") Long id,
             Authentication authentication) {
         String email = authentication.getName();
         documentService.deleteDocument(email, id);

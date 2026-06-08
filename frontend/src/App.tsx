@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import HomePage from './pages/HomePage';
+import DocumentsPage from './pages/DocumentsPage';
 
 export default function App() {
   return (
@@ -9,6 +10,7 @@ export default function App() {
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/documents" element={<DocumentsPage />} />
       {/* 정의되지 않은 경로는 홈으로 */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
