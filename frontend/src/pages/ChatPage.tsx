@@ -1,11 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import apiClient from '../api/client';
-import type { ApiResponse, ChatRequest, ChatResponse, DocumentResponse } from '../types/api';
+import apiClient, { redirectToLogin, refreshAccessToken } from '../api/client';
+import type { ApiResponse, ChatRequest, DocumentResponse } from '../types/api';
 
 interface ChatMessage {
   role: 'user' | 'ai';
   content: string;
+}
+
+function streamErrorMessage(status: number): string {
+  switch (status) {
+    case 403: return '이 자료에 대한 접근 권한이 없습니다.';
+    case 404: return '자료를 찾을 수 없습니다. 삭제되었을 수 있습니다.';
+    default:  return '답변을 가져오지 못했습니다. 다시 시도해 주세요.';
+  }
 }
 
 export default function ChatPage() {
@@ -19,6 +27,8 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  // null: 스트리밍 없음 / string: 스트리밍 중 (빈 문자열이면 첫 토큰 대기)
+  const [streamingContent, setStreamingContent] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -30,10 +40,10 @@ export default function ChatPage() {
     fetchDocuments();
   }, [navigate]);
 
-  // 새 메시지나 로딩 상태가 바뀔 때 스크롤을 맨 아래로 이동
+  // 새 메시지·스트리밍 토큰 도착 시 스크롤을 맨 아래로 이동
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, sending]);
+  }, [messages, sending, streamingContent]);
 
   const fetchDocuments = async () => {
     setLoadingDocs(true);
@@ -56,7 +66,8 @@ export default function ChatPage() {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDocId || !input.trim() || sending) return;
+    const docId = selectedDocId; // null 가드 후 number로 고정
+    if (!docId || !input.trim() || sending) return;
 
     const userMessage = input.trim();
     setInput('');
@@ -64,16 +75,116 @@ export default function ChatPage() {
     setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setSending(true);
 
-    try {
-      const body: ChatRequest = { documentId: selectedDocId, message: userMessage };
-      const { data: res } = await apiClient.post<ApiResponse<ChatResponse>>('/api/chat', body);
-      setMessages((prev) => [...prev, { role: 'ai', content: res.data.answer }]);
-    } catch {
-      setError('답변을 가져오지 못했습니다. 자료 처리 상태를 확인하거나 다시 시도해 주세요.');
-    } finally {
-      setSending(false);
-    }
+    // fetch로 SSE 스트리밍 호출. axios 인터셉터를 거치지 않으므로 401 시 직접 refresh.
+    const doStream = async (retried: boolean): Promise<void> => {
+      const accessToken = localStorage.getItem('accessToken') ?? '';
+      const body: ChatRequest = { documentId: docId, message: userMessage };
+
+      let response: Response;
+      try {
+        response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/chat/stream`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(body),
+        });
+      } catch {
+        setError('네트워크 오류가 발생했습니다. 인터넷 연결을 확인해 주세요.');
+        setSending(false);
+        return;
+      }
+
+      if (!response.ok) {
+        if (response.status === 401 && !retried) {
+          try {
+            await refreshAccessToken();
+            return doStream(true);
+          } catch {
+            redirectToLogin();
+            return;
+          }
+        }
+        setError(streamErrorMessage(response.status));
+        setSending(false);
+        return;
+      }
+
+      if (!response.body) {
+        setError('스트림을 읽을 수 없습니다.');
+        setSending(false);
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let sseBuffer = '';  // 청크 경계에서 잘린 SSE 데이터 보존용
+      let accumulated = '';
+      setStreamingContent(''); // 이 시점부터 스트리밍 말풍선 표시
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          sseBuffer += decoder.decode(value, { stream: true });
+
+          // SSE 이벤트는 '\n\n'으로 구분. 마지막 조각은 다음 청크와 이어질 수 있어 버퍼에 보존.
+          const events = sseBuffer.split('\n\n');
+          sseBuffer = events.pop() ?? '';
+
+          for (const event of events) {
+            for (const line of event.split('\n')) {
+              if (line.startsWith('data:')) {
+                accumulated += line.slice(5); // "data:" 접두사 제거
+                setStreamingContent(accumulated);
+              }
+            }
+          }
+        }
+
+        // 스트림 종료 후 버퍼에 남은 데이터 처리
+        for (const line of sseBuffer.split('\n')) {
+          if (line.startsWith('data:')) {
+            accumulated += line.slice(5);
+          }
+        }
+
+        setMessages((prev) => [...prev, { role: 'ai', content: accumulated }]);
+      } catch {
+        setError('스트리밍 중 연결이 끊겼습니다. 다시 시도해 주세요.');
+      } finally {
+        setStreamingContent(null);
+        setSending(false);
+      }
+    };
+
+    await doStream(false);
   };
+
+  /*
+   * 동기 방식 (POST /api/chat) 롤백용 — 아래 함수를 handleSend로 교체하면 됩니다.
+   * import에 ChatResponse를 추가하고 apiClient import만 남기면 동작합니다.
+   *
+   * const handleSendSync = async (e: React.FormEvent) => {
+   *   e.preventDefault();
+   *   if (!selectedDocId || !input.trim() || sending) return;
+   *   const userMessage = input.trim();
+   *   setInput(''); setError('');
+   *   setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+   *   setSending(true);
+   *   try {
+   *     const body: ChatRequest = { documentId: selectedDocId, message: userMessage };
+   *     const { data: res } = await apiClient.post<ApiResponse<ChatResponse>>('/api/chat', body);
+   *     setMessages((prev) => [...prev, { role: 'ai', content: res.data.answer }]);
+   *   } catch {
+   *     setError('답변을 가져오지 못했습니다. 자료 처리 상태를 확인하거나 다시 시도해 주세요.');
+   *   } finally {
+   *     setSending(false);
+   *   }
+   * };
+   */
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -174,8 +285,8 @@ export default function ChatPage() {
             </div>
           ))}
 
-          {/* 답변 생성 중 — 점 바운스 애니메이션 */}
-          {sending && (
+          {/* fetch 헤더 도착 전 대기 스피너 */}
+          {sending && streamingContent === null && (
             <div className="flex justify-start">
               <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3.5">
                 <div className="flex gap-1 items-center">
@@ -183,6 +294,21 @@ export default function ChatPage() {
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 스트리밍 중 — 토큰이 점점 채워지는 AI 말풍선 */}
+          {streamingContent !== null && (
+            <div className="flex justify-start">
+              <div className="max-w-[75%] bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
+                {streamingContent || (
+                  <div className="flex gap-1 items-center py-1">
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  </div>
+                )}
               </div>
             </div>
           )}
