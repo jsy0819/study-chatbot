@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import apiClient from '../api/client';
 import type { ApiResponse, UserMeResponse } from '../types/api';
 
@@ -85,9 +85,14 @@ export default function HomePage() {
             </div>
           </dl>
 
-          <p className="mt-8 text-sm text-gray-400">
-            자료 업로드 및 채팅 기능은 다음 단계에서 추가됩니다.
-          </p>
+          <div className="mt-8 pt-6 border-t border-gray-100">
+            <Link
+              to="/documents"
+              className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-700 transition-colors"
+            >
+              내 자료 관리
+            </Link>
+          </div>
         </div>
       </main>
     </div>
