@@ -104,45 +104,38 @@ export default function DocumentsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
+    <div className="min-h-screen bg-surface">
+      <header className="bg-white border-b border-violet-100">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/" className="font-semibold text-gray-900 hover:text-gray-600 transition-colors">
+            <Link to="/" className="font-semibold text-gray-900 hover:text-violet-600 transition-colors">
               스터디 챗봇
             </Link>
-            <span className="text-gray-200">|</span>
+            <span className="text-violet-100">|</span>
             <span className="text-sm text-gray-500 font-medium">내 자료</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/chat" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-              채팅
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-            >
-              로그아웃
-            </button>
+            <Link to="/chat" className="nav-link">채팅</Link>
+            <button onClick={handleLogout} className="nav-link">로그아웃</button>
           </div>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
         {/* 자료 추가 */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="card p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-4">자료 추가</h2>
 
-          {/* 탭 */}
-          <div className="flex gap-1 mb-5 bg-gray-100 rounded-lg p-1 w-fit">
+          {/* 탭 — 활성 탭은 violet-700 텍스트로 강조 */}
+          <div className="flex gap-1 mb-5 bg-violet-50 rounded-lg p-1 w-fit">
             {(['text', 'pdf'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
                 className={`px-4 py-1.5 text-sm rounded-md transition-colors ${
                   tab === t
-                    ? 'bg-white text-gray-900 font-medium shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700'
+                    ? 'bg-white text-violet-700 font-semibold shadow-sm'
+                    : 'text-gray-400 hover:text-violet-600'
                 }`}
               >
                 {t === 'text' ? '텍스트' : 'PDF'}
@@ -158,7 +151,7 @@ export default function DocumentsPage() {
                 placeholder="제목"
                 value={textTitle}
                 onChange={(e) => setTextTitle(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="input-field"
                 required
               />
               <textarea
@@ -166,15 +159,18 @@ export default function DocumentsPage() {
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
                 rows={5}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
+                className="input-field resize-none"
                 required
               />
-              {textError && <p className="text-xs text-red-500">{textError}</p>}
-              <button
-                type="submit"
-                disabled={submittingText}
-                className="w-full bg-gray-900 text-white text-sm rounded-lg py-2 hover:bg-gray-700 transition-colors disabled:opacity-50"
-              >
+              {textError && (
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <svg className="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                  </svg>
+                  <span>{textError}</span>
+                </div>
+              )}
+              <button type="submit" disabled={submittingText} className="btn-primary w-full">
                 {submittingText ? '저장 중...' : '자료 저장'}
               </button>
             </form>
@@ -188,16 +184,23 @@ export default function DocumentsPage() {
                 placeholder="제목 (선택 — 비워두면 파일명으로 자동 설정)"
                 value={pdfTitle}
                 onChange={(e) => setPdfTitle(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="input-field"
               />
               <label className="block cursor-pointer">
                 <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    pdfFile ? 'border-gray-400 bg-gray-50' : 'border-gray-200 hover:border-gray-400'
+                  className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+                    pdfFile
+                      ? 'border-violet-400 bg-violet-50/40'
+                      : 'border-violet-200 hover:border-violet-400 hover:bg-violet-50/30'
                   }`}
                 >
                   {pdfFile ? (
-                    <p className="text-sm text-gray-900 font-medium">{pdfFile.name}</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <svg className="w-4 h-4 text-violet-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                      </svg>
+                      <p className="text-sm text-violet-700 font-medium">{pdfFile.name}</p>
+                    </div>
                   ) : (
                     <>
                       <p className="text-sm text-gray-400">클릭하여 PDF 파일 선택</p>
@@ -214,12 +217,15 @@ export default function DocumentsPage() {
                   required
                 />
               </label>
-              {pdfError && <p className="text-xs text-red-500">{pdfError}</p>}
-              <button
-                type="submit"
-                disabled={submittingPdf || !pdfFile}
-                className="w-full bg-gray-900 text-white text-sm rounded-lg py-2 hover:bg-gray-700 transition-colors disabled:opacity-50"
-              >
+              {pdfError && (
+                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                  <svg className="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+                  </svg>
+                  <span>{pdfError}</span>
+                </div>
+              )}
+              <button type="submit" disabled={submittingPdf || !pdfFile} className="btn-primary w-full">
                 {submittingPdf ? '업로드 중...' : 'PDF 업로드'}
               </button>
             </form>
@@ -227,12 +233,12 @@ export default function DocumentsPage() {
         </div>
 
         {/* 자료 목록 */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="card p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-semibold text-gray-900">내 자료</h2>
             <button
               onClick={fetchDocuments}
-              className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+              className="text-xs text-gray-400 hover:text-violet-600 transition-colors"
             >
               새로고침
             </button>
@@ -240,16 +246,19 @@ export default function DocumentsPage() {
 
           {loadingList ? (
             <div className="flex justify-center py-8">
-              <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-900 rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
             </div>
           ) : listError ? (
             <p className="text-sm text-red-500 text-center py-4">{listError}</p>
           ) : documents.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-8">아직 자료가 없습니다</p>
           ) : (
-            <ul className="divide-y divide-gray-100">
+            <ul className="divide-y divide-violet-50">
               {documents.map((doc) => (
-                <li key={doc.id} className="py-3 flex items-center justify-between gap-4">
+                <li
+                  key={doc.id}
+                  className="py-3 flex items-center justify-between gap-4 -mx-2 px-2 rounded-lg hover:bg-violet-50/40 transition-colors"
+                >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{doc.title}</p>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -261,7 +270,7 @@ export default function DocumentsPage() {
                   </div>
                   <button
                     onClick={() => handleDelete(doc.id)}
-                    className="flex-shrink-0 text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    className="flex-shrink-0 text-xs text-gray-400 hover:text-red-500 font-medium transition-colors"
                   >
                     삭제
                   </button>
@@ -277,13 +286,13 @@ export default function DocumentsPage() {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, { label: string; className: string }> = {
-    PROCESSING: { label: '처리중', className: 'bg-blue-50 text-blue-600' },
-    DONE:       { label: '완료',   className: 'bg-green-50 text-green-700' },
-    FAILED:     { label: '실패',   className: 'bg-red-50 text-red-500' },
+    PROCESSING: { label: '처리중', className: 'bg-blue-50 text-blue-600 border border-blue-100' },
+    DONE:       { label: '완료',   className: 'bg-green-50 text-green-700 border border-green-100' },
+    FAILED:     { label: '실패',   className: 'bg-red-50 text-red-500 border border-red-100' },
   };
-  const style = styles[status] ?? { label: status, className: 'bg-gray-100 text-gray-500' };
+  const style = styles[status] ?? { label: status, className: 'bg-gray-100 text-gray-500 border border-gray-200' };
   return (
-    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${style.className}`}>
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.className}`}>
       {style.label}
     </span>
   );

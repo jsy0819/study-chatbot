@@ -193,43 +193,36 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col bg-surface">
       {/* 헤더 */}
-      <header className="flex-shrink-0 bg-white border-b border-gray-200">
+      <header className="flex-shrink-0 bg-white border-b border-violet-100">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link to="/" className="font-semibold text-gray-900 hover:text-gray-600 transition-colors">
+            <Link to="/" className="font-semibold text-gray-900 hover:text-violet-600 transition-colors">
               스터디 챗봇
             </Link>
-            <span className="text-gray-200">|</span>
+            <span className="text-violet-100">|</span>
             <span className="text-sm text-gray-500 font-medium">채팅</span>
           </div>
           <div className="flex items-center gap-4">
-            <Link to="/documents" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
-              내 자료
-            </Link>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-            >
-              로그아웃
-            </button>
+            <Link to="/documents" className="nav-link">내 자료</Link>
+            <button onClick={handleLogout} className="nav-link">로그아웃</button>
           </div>
         </div>
       </header>
 
       {/* 자료 선택 바 */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-100">
+      <div className="flex-shrink-0 bg-white border-b border-violet-50">
         <div className="max-w-3xl mx-auto px-4 py-3">
           {loadingDocs ? (
             <div className="flex items-center gap-2 text-sm text-gray-400">
-              <div className="w-3.5 h-3.5 border border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              <div className="w-3.5 h-3.5 border border-violet-200 border-t-violet-500 rounded-full animate-spin" />
               자료 불러오는 중...
             </div>
           ) : documents.length === 0 ? (
             <p className="text-sm text-gray-400">
               채팅 가능한 자료가 없습니다.{' '}
-              <Link to="/documents" className="text-gray-900 underline underline-offset-2">
+              <Link to="/documents" className="text-violet-600 underline underline-offset-2 hover:text-violet-700">
                 자료 추가하기
               </Link>
             </p>
@@ -242,7 +235,9 @@ export default function ChatPage() {
                 id="doc-select"
                 value={selectedDocId ?? ''}
                 onChange={(e) => handleDocChange(e.target.value ? Number(e.target.value) : null)}
-                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white
+                           focus:outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200
+                           hover:border-gray-300 transition-all duration-150"
               >
                 <option value="">자료를 선택하세요</option>
                 {documents.map((doc) => (
@@ -270,14 +265,17 @@ export default function ChatPage() {
             </div>
           )}
 
-          {/* 대화 메시지 */}
+          {/* 대화 메시지 — animate-msg-in으로 각 메시지가 부드럽게 등장 */}
           {messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              key={i}
+              className={`flex animate-msg-in ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
               <div
                 className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
-                    ? 'bg-gray-900 text-white rounded-br-sm'
-                    : 'bg-white border border-gray-200 text-gray-800 rounded-bl-sm'
+                    ? 'bg-violet-600 text-white rounded-br-sm'
+                    : 'bg-white border border-violet-100 text-gray-800 rounded-bl-sm shadow-sm'
                 }`}
               >
                 {msg.content}
@@ -287,12 +285,12 @@ export default function ChatPage() {
 
           {/* fetch 헤더 도착 전 대기 스피너 */}
           {sending && streamingContent === null && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3.5">
+            <div className="flex justify-start animate-msg-in">
+              <div className="bg-white border border-violet-100 rounded-2xl rounded-bl-sm px-4 py-3.5 shadow-sm">
                 <div className="flex gap-1 items-center">
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                  <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  <span className="w-1.5 h-1.5 bg-violet-300 rounded-full animate-bounce [animation-delay:0ms]" />
+                  <span className="w-1.5 h-1.5 bg-violet-300 rounded-full animate-bounce [animation-delay:150ms]" />
+                  <span className="w-1.5 h-1.5 bg-violet-300 rounded-full animate-bounce [animation-delay:300ms]" />
                 </div>
               </div>
             </div>
@@ -300,13 +298,13 @@ export default function ChatPage() {
 
           {/* 스트리밍 중 — 토큰이 점점 채워지는 AI 말풍선 */}
           {streamingContent !== null && (
-            <div className="flex justify-start">
-              <div className="max-w-[75%] bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-gray-800">
+            <div className="flex justify-start animate-msg-in">
+              <div className="max-w-[75%] bg-white border border-violet-100 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap text-gray-800 shadow-sm">
                 {streamingContent || (
                   <div className="flex gap-1 items-center py-1">
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                    <span className="w-1.5 h-1.5 bg-violet-300 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="w-1.5 h-1.5 bg-violet-300 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="w-1.5 h-1.5 bg-violet-300 rounded-full animate-bounce [animation-delay:300ms]" />
                   </div>
                 )}
               </div>
@@ -315,7 +313,7 @@ export default function ChatPage() {
 
           {/* 에러 메시지 — AI 말풍선 스타일로 인라인 표시 */}
           {error && (
-            <div className="flex justify-start">
+            <div className="flex justify-start animate-msg-in">
               <div className="max-w-[75%] bg-red-50 border border-red-200 text-red-600 rounded-2xl rounded-bl-sm px-4 py-2.5 text-sm leading-relaxed">
                 {error}
               </div>
@@ -327,7 +325,7 @@ export default function ChatPage() {
       </div>
 
       {/* 입력 영역 */}
-      <div className="flex-shrink-0 bg-white border-t border-gray-200">
+      <div className="flex-shrink-0 bg-white border-t border-violet-100">
         <div className="max-w-3xl mx-auto px-4 py-3">
           <form onSubmit={handleSend} className="flex gap-2">
             <input
@@ -336,12 +334,12 @@ export default function ChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={!selectedDocId || sending}
-              className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+              className="input-field flex-1 disabled:bg-gray-50 disabled:text-gray-400 disabled:cursor-not-allowed"
             />
             <button
               type="submit"
               disabled={!selectedDocId || !input.trim() || sending}
-              className="flex-shrink-0 bg-gray-900 text-white text-sm rounded-xl px-5 py-2.5 hover:bg-gray-700 transition-colors disabled:opacity-40"
+              className="btn-primary flex-shrink-0 px-5"
             >
               전송
             </button>
