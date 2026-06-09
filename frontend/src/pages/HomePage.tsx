@@ -35,7 +35,7 @@ export default function HomePage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-surface flex items-center justify-center">
         <p className="text-red-600 text-sm">{error}</p>
       </div>
     );
@@ -43,22 +43,19 @@ export default function HomePage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-gray-300 border-t-gray-900 rounded-full animate-spin" />
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface">
       {/* 헤더 */}
-      <header className="bg-white border-b border-gray-200">
+      <header className="bg-white border-b border-violet-100">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <span className="font-semibold text-gray-900">스터디 챗봇</span>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-          >
+          <button onClick={handleLogout} className="nav-link">
             로그아웃
           </button>
         </div>
@@ -66,7 +63,7 @@ export default function HomePage() {
 
       {/* 본문 */}
       <main className="max-w-3xl mx-auto px-4 py-12">
-        <div className="bg-white rounded-2xl border border-gray-200 p-8">
+        <div className="card p-8">
           <p className="text-sm text-gray-500 mb-1">환영합니다 👋</p>
           <h1 className="text-2xl font-semibold text-gray-900 mb-6">{user.name}님</h1>
 
@@ -85,17 +82,11 @@ export default function HomePage() {
             </div>
           </dl>
 
-          <div className="mt-8 pt-6 border-t border-gray-100 flex gap-3">
-            <Link
-              to="/chat"
-              className="inline-flex items-center gap-2 bg-gray-900 text-white text-sm rounded-lg px-4 py-2 hover:bg-gray-700 transition-colors"
-            >
+          <div className="mt-8 pt-6 border-t border-violet-50 flex gap-3">
+            <Link to="/chat" className="btn-primary">
               채팅 시작
             </Link>
-            <Link
-              to="/documents"
-              className="inline-flex items-center gap-2 border border-gray-200 text-gray-700 text-sm rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors"
-            >
+            <Link to="/documents" className="btn-secondary">
               내 자료 관리
             </Link>
           </div>
