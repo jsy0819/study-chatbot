@@ -121,4 +121,14 @@ public class GlobalExceptionHandler {
                 .build()
         );
     }
+
+    @ExceptionHandler(QuizParsingException.class)
+    public ResponseEntity<ErrorResponse> handleQuizParsing(QuizParsingException e) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(
+            ErrorResponse.builder()
+                .code("QUIZ_PARSING_ERROR")
+                .message(e.getMessage())
+                .build()
+        );
+    }
 }
