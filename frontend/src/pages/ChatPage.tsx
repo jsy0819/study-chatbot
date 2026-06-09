@@ -138,10 +138,17 @@ export default function ChatPage() {
             for (const line of event.split('\n')) {
               if (line.startsWith('data:')) {
                 accumulated += line.slice(5); // "data:" 접두사 제거
-                setStreamingContent(accumulated);
               }
             }
           }
+
+          // 청크당 한 번만 상태를 갱신한다.
+          // setTimeout(0)으로 현재 매크로태스크를 끊어야 브라우저가 React 렌더와
+          // 페인트를 처리할 기회를 얻는다. reader.read()가 내부 버퍼의 데이터로
+          // 연속으로 즉시 resolve되면 JS 콜 스택이 비지 않아 페인트가 지연되는데,
+          // 이 yield가 그 구조를 막는다.
+          setStreamingContent(accumulated);
+          await new Promise<void>((resolve) => setTimeout(resolve, 0));
         }
 
         // 스트림 종료 후 버퍼에 남은 데이터 처리
