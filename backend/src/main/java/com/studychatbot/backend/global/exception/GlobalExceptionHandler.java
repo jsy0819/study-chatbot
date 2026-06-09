@@ -131,4 +131,24 @@ public class GlobalExceptionHandler {
                 .build()
         );
     }
+
+    @ExceptionHandler(QuizSessionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleQuizSessionNotFound(QuizSessionNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ErrorResponse.builder()
+                .code("QUIZ_SESSION_NOT_FOUND")
+                .message(e.getMessage())
+                .build()
+        );
+    }
+
+    @ExceptionHandler(QuizAlreadySubmittedException.class)
+    public ResponseEntity<ErrorResponse> handleQuizAlreadySubmitted(QuizAlreadySubmittedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+            ErrorResponse.builder()
+                .code("QUIZ_ALREADY_SUBMITTED")
+                .message(e.getMessage())
+                .build()
+        );
+    }
 }
