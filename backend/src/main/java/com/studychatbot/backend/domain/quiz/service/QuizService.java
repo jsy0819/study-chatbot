@@ -4,15 +4,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studychatbot.backend.domain.document.entity.Document;
 import com.studychatbot.backend.domain.document.repository.DocumentRepository;
-import com.studychatbot.backend.domain.quiz.dto.QuizGenerationRequest;
-import com.studychatbot.backend.domain.quiz.dto.QuizGenerationResponse;
-import com.studychatbot.backend.domain.quiz.dto.QuizItemDto;
+import com.studychatbot.backend.domain.quiz.dto.*;
+import com.studychatbot.backend.domain.quiz.entity.QuizQuestion;
+import com.studychatbot.backend.domain.quiz.entity.QuizSession;
+import com.studychatbot.backend.domain.quiz.repository.QuizSessionRepository;
 import com.studychatbot.backend.domain.user.entity.User;
 import com.studychatbot.backend.domain.user.repository.UserRepository;
-import com.studychatbot.backend.global.exception.DocumentNotFoundException;
-import com.studychatbot.backend.global.exception.ForbiddenException;
-import com.studychatbot.backend.global.exception.InvalidCredentialsException;
-import com.studychatbot.backend.global.exception.QuizParsingException;
+import com.studychatbot.backend.global.exception.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
@@ -22,7 +20,9 @@ import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -33,24 +33,28 @@ public class QuizService {
 
     private final UserRepository userRepository;
     private final DocumentRepository documentRepository;
+    private final QuizSessionRepository quizSessionRepository;
     private final ChatClient chatClient;
     private final VectorStore vectorStore;
     private final ObjectMapper objectMapper;
 
-    public QuizGenerationResponse generate(String email, QuizGenerationRequest request) {
+    /**
+     * LLM으로 퀴즈를 생성하고 세션·질문을 DB에 저장한다.
+     * 응답 DTO에는 answerIndex·explanation이 없다 — 정답 숨김 보장.
+     */
+    @Transactional
+    public QuizSessionCreateResponse generate(String email, QuizGenerationRequest request) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(InvalidCredentialsException::new);
 
         Document document = documentRepository.findById(request.getDocumentId())
                 .orElseThrow(DocumentNotFoundException::new);
 
-        // DocumentService, ChatService와 동일한 소유권 검사 패턴
         if (!document.getUser().getId().equals(user.getId())) {
             throw new ForbiddenException();
         }
 
-        // 퀴즈 생성은 특정 질문 없이 전체 맥락이 필요 — 범용 쿼리로 핵심 청크를 넓게 수집
-        // topK를 questionCount에 비례시켜 더 많은 문제일수록 더 다양한 자료 범위를 커버
+        // questionCount에 비례해 topK 조정 — 많은 문제일수록 더 넓은 맥락 필요
         int topK = Math.min(request.getQuestionCount() * 2, 10);
         var filter = new FilterExpressionBuilder()
                 .eq("documentId", String.valueOf(request.getDocumentId()))
@@ -65,7 +69,7 @@ public class QuizService {
         List<org.springframework.ai.document.Document> chunks =
                 vectorStore.similaritySearch(searchRequest);
 
-        log.info("퀴즈 RAG 검색 완료 — documentId={}, 청크 수={}, topK={}", request.getDocumentId(), chunks.size(), topK);
+        log.info("퀴즈 RAG 검색 완료 — documentId={}, 청크 수={}", request.getDocumentId(), chunks.size());
 
         if (chunks.isEmpty()) {
             throw new QuizParsingException("해당 자료에서 내용을 찾을 수 없습니다. 자료가 아직 처리 중이거나 내용이 없을 수 있습니다.");
@@ -80,14 +84,102 @@ public class QuizService {
 
         log.debug("LLM 퀴즈 원문 응답 — documentId={}, length={}", request.getDocumentId(), raw.length());
 
-        List<QuizItemDto> quizzes = parseAndValidate(raw, request.getQuestionCount());
-        return new QuizGenerationResponse(quizzes);
+        List<QuizItemDto> items = parseAndValidate(raw, request.getQuestionCount());
+
+        // QuizSession 생성 후 QuizQuestion들을 cascade로 함께 저장
+        QuizSession session = QuizSession.builder()
+                .user(user)
+                .document(document)
+                .questionCount(items.size())
+                .build();
+
+        for (int i = 0; i < items.size(); i++) {
+            QuizItemDto item = items.get(i);
+            QuizQuestion question = QuizQuestion.builder()
+                    .quizSession(session)
+                    .questionOrder(i + 1)
+                    .question(item.getQuestion())
+                    .choices(item.getChoices())
+                    .answerIndex(item.getAnswerIndex())
+                    .explanation(item.getExplanation())
+                    .build();
+            session.getQuestions().add(question);
+        }
+
+        QuizSession saved = quizSessionRepository.save(session);
+        log.info("퀴즈 세션 저장 완료 — sessionId={}, 문제 수={}", saved.getId(), saved.getQuestions().size());
+
+        return QuizSessionCreateResponse.from(saved);
     }
 
     /**
-     * LLM 응답에서 JSON 배열만 추출한 뒤 파싱하고, 각 문제의 형식을 검증한다.
-     * LLM이 프롬프트를 어겨 코드펜스나 설명을 붙여도 배열 부분만 안전하게 꺼낼 수 있다.
+     * 사용자 답안을 받아 채점하고 결과를 반환한다.
+     * 정답이 이 시점에 처음으로 클라이언트에 공개된다.
      */
+    @Transactional
+    public QuizSubmitResponse submit(String email, Long sessionId, QuizSubmitRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        QuizSession session = quizSessionRepository.findById(sessionId)
+                .orElseThrow(QuizSessionNotFoundException::new);
+
+        if (!session.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException();
+        }
+
+        if (session.isSubmitted()) {
+            throw new QuizAlreadySubmittedException();
+        }
+
+        // questionId → QuizQuestion 맵으로 O(1) 조회
+        Map<Long, QuizQuestion> questionMap = session.getQuestions().stream()
+                .collect(Collectors.toMap(QuizQuestion::getId, q -> q));
+
+        for (QuizAnswerItem answer : request.getAnswers()) {
+            QuizQuestion q = questionMap.get(answer.getQuestionId());
+            if (q != null) {
+                q.submitAnswer(answer.getSelectedIndex());
+            }
+        }
+
+        int score = (int) session.getQuestions().stream()
+                .filter(QuizQuestion::isCorrect)
+                .count();
+
+        session.submit(score, LocalDateTime.now());
+        // @Transactional dirty checking으로 save() 호출 없이 변경 사항이 반영된다
+
+        log.info("퀴즈 채점 완료 — sessionId={}, score={}/{}", sessionId, score, session.getQuestionCount());
+
+        return QuizSubmitResponse.from(session);
+    }
+
+    /** 본인의 퀴즈 세션 목록을 최신순으로 반환한다. */
+    public List<QuizSessionSummary> getMySessions(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        return quizSessionRepository.findAllByUserOrderByCreatedAtDesc(user).stream()
+                .map(QuizSessionSummary::from)
+                .toList();
+    }
+
+    /** 특정 세션의 상세 정보를 반환한다. 소유권 검증 후 정답·해설 포함해 공개. */
+    public QuizSessionDetailResponse getSessionDetail(String email, Long sessionId) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        QuizSession session = quizSessionRepository.findById(sessionId)
+                .orElseThrow(QuizSessionNotFoundException::new);
+
+        if (!session.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException();
+        }
+
+        return QuizSessionDetailResponse.from(session);
+    }
+
     private List<QuizItemDto> parseAndValidate(String raw, int expectedCount) {
         String json = extractJson(raw);
         List<QuizItemDto> items;
@@ -129,7 +221,6 @@ public class QuizService {
             }
         }
 
-        // 코드펜스 제거 후에도 앞뒤에 설명이 붙어 있을 경우 배열 구간만 잘라낸다
         int start = trimmed.indexOf('[');
         int end = trimmed.lastIndexOf(']');
         if (start != -1 && end > start) {
@@ -140,7 +231,6 @@ public class QuizService {
     }
 
     /**
-     * 학습 자료 기반 4지선다 퀴즈 생성 프롬프트.
      * %s/%d 대신 {count}/{context} 플레이스홀더 + replace()를 사용한다 —
      * 자료 내용에 '%' 기호가 포함되면 String.formatted()가 IllegalFormatException을 던지기 때문이다.
      */
