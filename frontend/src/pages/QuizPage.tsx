@@ -7,13 +7,30 @@ import type {
   DocumentResponse,
   QuestionCount,
   QuizGenerationRequest,
+  QuizResultQuestion,
   QuizSessionCreateResponse,
+  QuizSessionDetailResponse,
+  QuizSessionSummary,
   QuizSubmitRequest,
   QuizSubmitResponse,
 } from '../types/api';
 
 // 한 페이지 안에서 단계별로 전환되는 화면 상태
-type Phase = 'setup' | 'solving' | 'result';
+// record: 기록에서 열어본 지난 세션 상세 (result와 같은 ResultView를 공유)
+type Phase = 'setup' | 'solving' | 'result' | 'record';
+
+// LocalDateTime(ISO, 타임존 없음) 문자열을 한국어 날짜·시각으로 표시
+function formatDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 const QUESTION_COUNTS: QuestionCount[] = [3, 5, 10];
 
@@ -52,12 +69,22 @@ export default function QuizPage() {
   // ── result 단계 상태 ──
   const [result, setResult] = useState<QuizSubmitResponse | null>(null);
 
+  // ── 지난 퀴즈 기록(setup 하단) 상태 ──
+  const [sessions, setSessions] = useState<QuizSessionSummary[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [sessionsError, setSessionsError] = useState('');
+  // 상세 로딩 중인 세션 id — 해당 항목에만 스피너 표시
+  const [openingSessionId, setOpeningSessionId] = useState<number | null>(null);
+  // record 단계에서 보여줄 지난 세션 상세
+  const [detail, setDetail] = useState<QuizSessionDetailResponse | null>(null);
+
   useEffect(() => {
     if (!localStorage.getItem('accessToken')) {
       navigate('/login');
       return;
     }
     fetchDocuments();
+    fetchSessions();
   }, [navigate]);
 
   // ChatPage와 동일하게 DONE 상태 자료만 노출 (퀴즈 생성은 벡터 임베딩이 끝나야 가능)
@@ -71,6 +98,44 @@ export default function QuizPage() {
     } finally {
       setLoadingDocs(false);
     }
+  };
+
+  // 내 퀴즈 세션 목록을 불러온다 (최신순은 백엔드가 보장).
+  const fetchSessions = async () => {
+    setLoadingSessions(true);
+    setSessionsError('');
+    try {
+      const { data: res } = await apiClient.get<ApiResponse<QuizSessionSummary[]>>('/api/quiz/sessions');
+      setSessions(res.data);
+    } catch (err) {
+      setSessionsError(quizErrorMessage(err, '기록을 불러오지 못했습니다.'));
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  // 기록 항목 클릭 → 상세 조회 후 record 화면으로 전환
+  const handleOpenSession = async (sessionId: number) => {
+    if (openingSessionId) return;
+    setOpeningSessionId(sessionId);
+    setSessionsError('');
+    try {
+      const { data: res } = await apiClient.get<ApiResponse<QuizSessionDetailResponse>>(
+        `/api/quiz/sessions/${sessionId}`,
+      );
+      setDetail(res.data);
+      setPhase('record');
+    } catch (err) {
+      setSessionsError(quizErrorMessage(err, '퀴즈 상세를 불러오지 못했습니다.'));
+    } finally {
+      setOpeningSessionId(null);
+    }
+  };
+
+  // record → setup 으로 복귀 (목록으로 돌아가기)
+  const handleBackToList = () => {
+    setDetail(null);
+    setPhase('setup');
   };
 
   const handleGenerate = async () => {
@@ -130,7 +195,7 @@ export default function QuizPage() {
     }
   };
 
-  // result → setup 으로 초기화 (다시 풀기)
+  // result → setup 으로 초기화 (다시 풀기). 방금 제출한 세션이 기록에 보이도록 목록을 갱신한다.
   const handleRestart = () => {
     setSession(null);
     setAnswers({});
@@ -138,6 +203,7 @@ export default function QuizPage() {
     setSolvingError('');
     setSetupError('');
     setPhase('setup');
+    fetchSessions();
   };
 
   const handleLogout = () => {
@@ -168,17 +234,26 @@ export default function QuizPage() {
 
       <main className="max-w-3xl mx-auto px-4 py-8">
         {phase === 'setup' && (
-          <SetupView
-            documents={documents}
-            loadingDocs={loadingDocs}
-            selectedDocId={selectedDocId}
-            onSelectDoc={setSelectedDocId}
-            questionCount={questionCount}
-            onSelectCount={setQuestionCount}
-            generating={generating}
-            error={setupError}
-            onGenerate={handleGenerate}
-          />
+          <div className="space-y-6">
+            <SetupView
+              documents={documents}
+              loadingDocs={loadingDocs}
+              selectedDocId={selectedDocId}
+              onSelectDoc={setSelectedDocId}
+              questionCount={questionCount}
+              onSelectCount={setQuestionCount}
+              generating={generating}
+              error={setupError}
+              onGenerate={handleGenerate}
+            />
+            <HistorySection
+              sessions={sessions}
+              loading={loadingSessions}
+              error={sessionsError}
+              openingSessionId={openingSessionId}
+              onOpen={handleOpenSession}
+            />
+          </div>
         )}
 
         {phase === 'solving' && session && (
@@ -194,9 +269,23 @@ export default function QuizPage() {
 
         {phase === 'result' && result && (
           <ResultView
-            result={result}
             documentTitle={documents.find((d) => d.id === selectedDocId)?.title ?? ''}
-            onRestart={handleRestart}
+            score={result.score}
+            totalCount={result.totalCount}
+            questions={result.results}
+            actionLabel="다시 풀기"
+            onAction={handleRestart}
+          />
+        )}
+
+        {phase === 'record' && detail && (
+          <ResultView
+            documentTitle={detail.documentTitle}
+            score={detail.score}
+            totalCount={detail.questionCount}
+            questions={detail.questions}
+            actionLabel="목록으로 돌아가기"
+            onAction={handleBackToList}
           />
         )}
       </main>
@@ -377,30 +466,36 @@ function SolvingView({ session, answers, onSelectAnswer, submitting, error, onSu
 }
 
 // ── result: 채점 결과 ──
+// 제출 직후(result)와 기록 상세(record)가 공유하는 결과 UI.
+// 데이터 출처(QuizSubmitResponse / QuizSessionDetailResponse)마다 필드명이 달라
+// 객체 대신 정규화된 값들을 받고, 하단 버튼만 상황에 맞게(actionLabel/onAction) 바꾼다.
 interface ResultViewProps {
-  result: QuizSubmitResponse;
   documentTitle: string;
-  onRestart: () => void;
+  score: number | null;
+  totalCount: number;
+  questions: QuizResultQuestion[];
+  actionLabel: string;
+  onAction: () => void;
 }
 
-function ResultView({ result, documentTitle, onRestart }: ResultViewProps) {
-  // 백엔드 응답은 results 배열을 주지만, 만일 누락돼도 .map 폭발을 막는다.
-  const results = result.results ?? [];
+function ResultView({ documentTitle, score, totalCount, questions, actionLabel, onAction }: ResultViewProps) {
+  // 응답 누락 시에도 .map 폭발을 막는다.
+  const items = questions ?? [];
   return (
     <div className="space-y-6">
       {/* 점수 요약 */}
       <div className="card p-8 text-center">
         <p className="text-sm text-gray-400 mb-1">{documentTitle}</p>
         <p className="text-3xl font-bold text-violet-600">
-          {result.score} <span className="text-gray-300">/</span> {result.totalCount}
+          {score} <span className="text-gray-300">/</span> {totalCount}
         </p>
         <p className="text-sm text-gray-500 mt-2">
-          {result.totalCount}문제 중 {result.score}문제 정답
+          {totalCount}문제 중 {score}문제 정답
         </p>
       </div>
 
       {/* 문제별 결과 */}
-      {results.map((q) => {
+      {items.map((q) => {
         const isCorrect = q.correct;
         return (
           <div
@@ -451,9 +546,74 @@ function ResultView({ result, documentTitle, onRestart }: ResultViewProps) {
         );
       })}
 
-      <button type="button" onClick={onRestart} className="btn-primary w-full">
-        다시 풀기
+      <button type="button" onClick={onAction} className="btn-primary w-full">
+        {actionLabel}
       </button>
+    </div>
+  );
+}
+
+// ── 지난 퀴즈 기록 (setup 하단) ──
+// 제출 완료된 세션만 노출한다 — 미제출(생성만 하고 중단) 세션은 점수·정답이 없어 기록이 아니다.
+interface HistorySectionProps {
+  sessions: QuizSessionSummary[];
+  loading: boolean;
+  error: string;
+  openingSessionId: number | null;
+  onOpen: (sessionId: number) => void;
+}
+
+function HistorySection({ sessions, loading, error, openingSessionId, onOpen }: HistorySectionProps) {
+  const submitted = sessions.filter((s) => s.submittedAt !== null);
+
+  return (
+    <div className="card p-6 space-y-4">
+      <div>
+        <h2 className="text-base font-semibold text-gray-900">지난 퀴즈 기록</h2>
+        <p className="text-sm text-gray-400 mt-1">제출한 퀴즈를 다시 열어 정답·해설을 볼 수 있습니다.</p>
+      </div>
+
+      {error && <ErrorBox message={error} />}
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-gray-400">
+          <div className="w-3.5 h-3.5 border border-violet-200 border-t-violet-500 rounded-full animate-spin" />
+          기록 불러오는 중...
+        </div>
+      ) : submitted.length === 0 ? (
+        <p className="text-sm text-gray-400">아직 푼 퀴즈가 없습니다.</p>
+      ) : (
+        <ul className="space-y-2">
+          {submitted.map((s) => {
+            const opening = openingSessionId === s.sessionId;
+            return (
+              <li key={s.sessionId}>
+                <button
+                  type="button"
+                  onClick={() => onOpen(s.sessionId)}
+                  disabled={openingSessionId !== null}
+                  className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 bg-white hover:border-violet-300 hover:bg-violet-50/30 transition-colors disabled:opacity-60 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">{s.documentTitle}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {s.submittedAt ? formatDateTime(s.submittedAt) : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-sm font-semibold text-violet-600">
+                      {s.score} <span className="text-gray-300">/</span> {s.questionCount}
+                    </span>
+                    {opening && (
+                      <div className="w-3.5 h-3.5 border border-violet-200 border-t-violet-500 rounded-full animate-spin" />
+                    )}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }
