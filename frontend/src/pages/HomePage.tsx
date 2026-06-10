@@ -82,9 +82,12 @@ export default function HomePage() {
             </div>
           </dl>
 
-          <div className="mt-8 pt-6 border-t border-violet-50 flex gap-3">
+          <div className="mt-8 pt-6 border-t border-violet-50 flex flex-wrap gap-3">
             <Link to="/chat" className="btn-primary">
               채팅 시작
+            </Link>
+            <Link to="/quiz" className="btn-secondary">
+              퀴즈 풀기
             </Link>
             <Link to="/documents" className="btn-secondary">
               내 자료 관리
