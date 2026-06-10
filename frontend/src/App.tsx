@@ -4,6 +4,7 @@ import SignupPage from './pages/SignupPage';
 import HomePage from './pages/HomePage';
 import DocumentsPage from './pages/DocumentsPage';
 import ChatPage from './pages/ChatPage';
+import QuizPage from './pages/QuizPage';
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/documents" element={<DocumentsPage />} />
       <Route path="/chat" element={<ChatPage />} />
+      <Route path="/quiz" element={<QuizPage />} />
       {/* 정의되지 않은 경로는 홈으로 */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
