@@ -98,3 +98,27 @@ export interface QuizSubmitResponse {
   totalCount: number;
   results: QuizResultQuestion[];
 }
+
+// GET /api/quiz/sessions 응답의 세션 요약 (백엔드 QuizSessionSummary와 필드명 일치)
+// 미제출 세션이면 score·submittedAt이 null로 내려온다.
+export interface QuizSessionSummary {
+  sessionId: number;
+  documentTitle: string;
+  questionCount: number;
+  score: number | null;
+  createdAt: string;
+  submittedAt: string | null;
+}
+
+// GET /api/quiz/sessions/{sessionId} 응답 (백엔드 QuizSessionDetailResponse와 필드명 일치)
+// 문제 항목은 백엔드가 제출 응답과 같은 QuizResultItem을 쓰므로 QuizResultQuestion을 재사용한다.
+// (제출된 세션 상세만 화면에서 열기 때문에 answerIndex·correct 등은 항상 채워져 있다.)
+export interface QuizSessionDetailResponse {
+  sessionId: number;
+  documentTitle: string;
+  questionCount: number;
+  score: number | null;
+  createdAt: string;
+  submittedAt: string | null;
+  questions: QuizResultQuestion[];
+}

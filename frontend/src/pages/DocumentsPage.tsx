@@ -116,6 +116,7 @@ export default function DocumentsPage() {
           </div>
           <div className="flex items-center gap-4">
             <Link to="/chat" className="nav-link">채팅</Link>
+            <Link to="/quiz" className="nav-link">퀴즈</Link>
             <button onClick={handleLogout} className="nav-link">로그아웃</button>
           </div>
         </div>
