@@ -4,6 +4,7 @@ import com.studychatbot.backend.global.jwt.JwtAuthenticationEntryPoint;
 import com.studychatbot.backend.global.jwt.JwtAuthenticationFilter;
 import jakarta.servlet.DispatcherType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -18,6 +19,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -28,17 +30,28 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
+    // CORS 허용 origin을 환경변수(APP_CORS_ALLOWED_ORIGINS, 쉼표 구분)로 주입받는다.
+    // 환경변수가 없으면 로컬 Vite 개발 서버(5173)를 기본 허용 → 로컬 개발 그대로 동작.
+    // 배포에서는 Vercel 프론트 도메인을 넣어 덮어쓴다.
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // 개발 환경: Vite 개발 서버(5173)에서 Spring Boot(8080)로의 요청을 허용
-    // 운영 환경에서는 실제 프론트엔드 도메인으로 교체할 것
+    // 허용 origin은 allowedOrigins 환경변수에서 주입 (쉼표로 다중 origin 지정 가능).
+    // allowCredentials(true)이므로 와일드카드("*")는 불가 → 명시적 origin 목록을 쓴다.
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .toList();
+
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
