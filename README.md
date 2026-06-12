@@ -6,6 +6,16 @@
 
 ---
 
+## 🔗 라이브 데모
+
+- **서비스 접속** — https://study-chatbot-phi.vercel.app
+- **API 문서 (Swagger)** — https://study-chatbot-production.up.railway.app/swagger-ui.html
+
+회원가입 후 자료를 올리고 질문·퀴즈 기능을 사용해볼 수 있습니다.
+배포 구성: 프론트엔드(Vercel) + 백엔드·PostgreSQL·Redis Stack(Railway).
+
+---
+
 ## ✨ 주요 기능
 
 - **회원가입 / JWT 인증** — BCrypt 비밀번호 해싱, 액세스 토큰 + 리프레시 토큰. 리프레시 토큰은 Redis에 저장하고 로그아웃 시 무효화합니다.
