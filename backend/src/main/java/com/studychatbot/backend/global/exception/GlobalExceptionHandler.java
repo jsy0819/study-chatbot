@@ -149,6 +149,16 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(ChatSessionNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleChatSessionNotFound(ChatSessionNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            ErrorResponse.builder()
+                .code("CHAT_SESSION_NOT_FOUND")
+                .message(e.getMessage())
+                .build()
+        );
+    }
+
     @ExceptionHandler(RateLimitExceededException.class)
     public ResponseEntity<ErrorResponse> handleRateLimitExceeded(RateLimitExceededException e) {
         // 한도 초과는 의도된 보호 동작이므로 스택트레이스 없이 warn 수준으로만 남긴다.
