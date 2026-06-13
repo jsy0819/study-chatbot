@@ -12,4 +12,7 @@ public class ChatRequest {
 
     @NotBlank(message = "질문을 입력해주세요.")
     private String message;
+
+    // 선택: 값이 있으면 기존 세션에 이어쓰기, 없으면(null) 새 세션을 생성한다.
+    private Long sessionId;
 }
