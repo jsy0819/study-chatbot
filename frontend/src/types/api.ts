@@ -25,15 +25,48 @@ export interface DocumentResponse {
   createdAt: string;
 }
 
-// POST /api/chat 요청
+// POST /api/chat, POST /api/chat/stream 요청
 export interface ChatRequest {
   documentId: number;
   message: string;
+  // 선택: 값이 있으면 기존 세션에 이어쓰기, 없으면 새 세션 생성.
+  // 이어쓰기 시 백엔드는 documentId를 무시하고 세션에 묶인 자료를 쓰지만, @NotNull이라 값은 보내야 한다.
+  sessionId?: number;
 }
 
 // POST /api/chat 응답
 export interface ChatResponse {
   answer: string;
+}
+
+// ── 채팅 기록 ─────────────────────────────────────────────────
+
+// 채팅 메시지 작성 주체 (백엔드 MessageRole enum과 일치)
+export type ChatMessageRole = 'USER' | 'AI';
+
+// GET /api/chat/sessions 응답의 세션 요약 (백엔드 ChatSessionSummary와 필드명 일치)
+export interface ChatSessionSummary {
+  sessionId: number;
+  documentTitle: string;
+  title: string;
+  messageCount: number;
+  createdAt: string;
+}
+
+// 세션 상세의 개별 메시지 (백엔드 ChatMessageDto와 필드명 일치)
+export interface ChatHistoryMessage {
+  role: ChatMessageRole;
+  content: string;
+  messageOrder: number;
+}
+
+// GET /api/chat/sessions/{sessionId} 응답 (백엔드 ChatSessionDetailResponse와 필드명 일치)
+export interface ChatSessionDetailResponse {
+  sessionId: number;
+  documentTitle: string;
+  title: string;
+  createdAt: string;
+  messages: ChatHistoryMessage[];
 }
 
 // POST /api/auth/refresh 응답
