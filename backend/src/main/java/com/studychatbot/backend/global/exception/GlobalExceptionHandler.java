@@ -1,5 +1,6 @@
 package com.studychatbot.backend.global.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -9,6 +10,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.List;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -84,6 +86,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GeminiApiException.class)
     public ResponseEntity<ErrorResponse> handleGeminiApi(GeminiApiException e) {
+        // 외부 LLM(Gemini) 호출 실패는 서버측에서 반드시 인지해야 하므로 로깅한다.
+        // - warn 사용: GeminiClient가 이미 원인 상세를 log.error로 기록하므로 ERROR 이중 기록을 피하고,
+        //   동시에 GeminiClient가 로깅하지 않는 "빈 응답" 경로까지 이 단일 지점에서 빠짐없이 포착한다.
+        // - e.getMessage()에 어떤 외부 호출이 어떻게 실패했는지가 담겨 진단에 활용된다.
+        log.warn("외부 LLM(Gemini) 호출 실패로 500 응답 — {}", e.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
             ErrorResponse.builder()
                 .code("GEMINI_API_ERROR")
@@ -148,6 +155,30 @@ public class GlobalExceptionHandler {
             ErrorResponse.builder()
                 .code("QUIZ_ALREADY_SUBMITTED")
                 .message(e.getMessage())
+                .build()
+        );
+    }
+
+    /**
+     * 예상하지 못한 모든 예외에 대한 최종 fallback 핸들러.
+     * (Redis/VectorStore 장애, ChatClient 실패, 기타 RuntimeException 등 위에서 명시적으로
+     *  처리하지 않은 예외가 Spring 기본 /error로 빠지면서 통일된 에러 포맷을 벗어나고
+     *  내부 정보가 노출되는 것을 막는다.)
+     *
+     * 설계 결정:
+     * - 더 구체적인 @ExceptionHandler가 우선 매칭되므로, 위에서 처리하는 알려진 예외는
+     *   이 fallback에 잡히지 않는다. (Spring의 ExceptionHandlerMethodResolver는 예외 계층상
+     *   가장 가까운 핸들러를 선택한다.)
+     * - 클라이언트에는 일반적인 메시지만 노출하고, 실제 예외 메시지·스택트레이스는 노출하지 않는다.
+     * - 디버깅을 위해 서버 로그에는 스택트레이스를 포함해 실제 예외를 기록한다.
+     */
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception e) {
+        log.error("처리되지 않은 예외 발생", e);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+            ErrorResponse.builder()
+                .code("INTERNAL_SERVER_ERROR")
+                .message("서버 오류가 발생했습니다.")
                 .build()
         );
     }
