@@ -149,6 +149,19 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleRateLimitExceeded(RateLimitExceededException e) {
+        // 한도 초과는 의도된 보호 동작이므로 스택트레이스 없이 warn 수준으로만 남긴다.
+        // (남용/폭주 패턴 모니터링에는 충분한 단서가 된다.)
+        log.warn("레이트리밋 초과 — {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(
+            ErrorResponse.builder()
+                .code("RATE_LIMIT_EXCEEDED")
+                .message(e.getMessage())
+                .build()
+        );
+    }
+
     @ExceptionHandler(QuizAlreadySubmittedException.class)
     public ResponseEntity<ErrorResponse> handleQuizAlreadySubmitted(QuizAlreadySubmittedException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
